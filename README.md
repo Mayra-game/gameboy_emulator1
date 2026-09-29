@@ -1,60 +1,48 @@
-# Game Boy Emulator (C)
+# My Game Boy Emulator
 
-A small, dependency-free Game Boy (DMG) emulator written in C11. Its organization follows the interpreter-first approach in [Cinoop](https://cturt.github.io/cinoop.html): CPU instruction execution, memory and cartridge mapping, then graphics and audio.
+This is a small Game Boy emulator written in C. It is a learning project about how a game console uses its CPU, memory, and other parts. The project follows ideas from the [Cinoop guide](https://cturt.github.io/cinoop.html).
 
 ## Build and run
 
-Apple Clang or another C11 compiler is required. From this folder:
+You need a C compiler. On a Mac, Apple Clang is already available if Xcode Command Line Tools are installed.
+
+Open Terminal in this project folder and run:
 
 ```sh
 make
 make test
-./gameboy_emulator path/to/game.gb
 ```
 
-The emulator runs at most one million instructions by default. Choose a limit, save the framebuffer to a 160×144 PPM image, or capture audio to a 44.1 kHz stereo WAV file:
+To try a Game Boy game, you need your own legally obtained ROM file. Replace `my-game.gb` with the path to that file:
 
 ```sh
-./gameboy_emulator --steps 5000000 --frame frame.ppm path/to/game.gb
-./gameboy_emulator --steps 5000000 --audio audio.wav path/to/game.gb
-./gameboy_emulator --play path/to/game.gb
+./gameboy_emulator my-game.gb
 ```
 
-The entry point starts the CPU and commonly used DMG I/O registers in an approximate post-boot
-state (`PC=0x0100`, LCD enabled); it does not execute the Nintendo boot ROM. Games that rely on
-other boot-ROM side effects may still fail. `--self-test` runs CPU, memory, cartridge, PPU, input,
-and APU checks. `make run ROM=path/to/game.gb` is also available.
+The normal run stops after one million instructions. You can choose a different limit, save a picture of the screen, or save sound to a WAV file:
 
-## How the code is organized
+```sh
+./gameboy_emulator --steps 5000000 --frame screen.ppm my-game.gb
+./gameboy_emulator --steps 5000000 --audio sound.wav my-game.gb
+./gameboy_emulator --play my-game.gb
+```
 
-- `src/cpu.c` fetches an opcode at the program counter, decodes it, updates registers and flags, and
-  reports how many clock cycles the instruction used.
-- `src/memory.c` routes 16-bit addresses to cartridge ROM/RAM, working RAM, video memory, I/O
-  registers, and hardware behavior. The `data` array represents the 64 KiB address range; cartridge
-  ROM and banked cartridge RAM are stored separately because they can be larger than one address
-  range at a time.
-- `memory_tick` advances the timer, LCD, and audio by the cycles reported by the CPU.
-- `src/main.c` loads the ROM, starts the CPU, and provides command-line, terminal display, and
-  self-test entry points.
+In play mode, use **W/A/S/D** to move, **J** for A, **K** for B, **U** for Select, and **I** for Start. Press **Q** to quit.
 
-For example, when the CPU executes `LD A,(HL)`, it passes the 16-bit address in `HL` to
-`memory_read`; the memory layer decides which device owns that address and returns its value.
+## How the main files work
 
-## Implemented
+- `src/main.c` starts the program, opens the game file, and connects the parts together.
+- `src/cpu.c` reads and runs the Game Boy's instructions. It keeps track of the CPU registers and flags.
+- `src/memory.c` handles requests to read or write memory. Depending on the address, it sends the request to game data, RAM, the screen, or another device.
 
-- LR35902 register pairs, stack, arithmetic/logic flags, relative/absolute jumps, calls, returns, restart vectors, interrupt entry, HALT/STOP, and instruction cycle accounting.
-- Algorithmic decoding for the regular base-opcode families and all CB-prefixed rotate/shift, bit, reset, and set operations; illegal opcodes are reported.
-- 64 KiB address space, echo RAM, unusable OAM gap, I/O registers, interrupt request/enable registers, active-low joypad state, cycle-driven DIV/TIMA timer, and joypad interrupt signaling.
-- ROM-only and MBC1 ROM/RAM banking for cartridge images up to 2 MiB.
-- Cycle-driven DMG LCD modes, LY/LYC and STAT behavior, VBlank/STAT interrupts, background and window tile rendering, 8×8/8×16 sprites with palette and priority handling, and OAM DMA.
-- A basic APU with pulse, wave, and noise channel output mixed to optional stereo PCM WAV capture.
-- Optional real-time terminal play mode with a scaled color display and keyboard input.
-- A PPM snapshot of the emulated framebuffer after the selected instruction budget.
+The Game Boy CPU uses 16-bit addresses, so it can address 65,536 memory locations. For example, an instruction can ask to read the address stored in the `HL` registers. The CPU asks the memory code for that value, and the memory code finds the right place to read it from.
 
-## Limitations
+## What it can do
 
-`--play` runs until you press `Q` in an interactive terminal. Controls are **W/A/S/D** for directions, **J** for A, **K** for B, **U** for Select, and **I** for Start. It renders a reduced 80-column display and briefly holds each keypress to represent a button press.
+The emulator can run many common Game Boy CPU instructions, use basic game cartridges, update a simple Game Boy screen, and read button presses. It also has a basic sound system. The `make test` command runs checks for the CPU and several other parts of the emulator.
 
-This is an educational DMG emulator, not a cycle-accurate or full commercial-game compatibility claim. There is no desktop window frontend; `--play` uses an ANSI terminal. Joypad state is also available through the `memory_set_button` API. APU sweep and exact frame sequencing/mixing are simplified, and WAV capture is offline (there is no live playback). The Nintendo boot ROM, serial link, battery-backed save persistence, and MBC2/3/5 or other mapper support are absent. DMA copies OAM immediately rather than modeling bus stalls, timer reload timing is simplified, and some interrupt/HALT edge cases remain approximate. Some ROMs will not boot or behave correctly under these limits.
+## What is not finished
 
-The project is an educational implementation informed by Cinoop's design discussion; it does not copy Cinoop source code.
+This is a learning project, so it does not run every Game Boy game correctly. It starts with settings that are similar to the Game Boy after its startup screen, instead of running the original Nintendo boot program. Some timing and sound details are simplified, and it does not support every type of game cartridge. Play mode uses the Terminal rather than a separate game window.
+
+The project is based on ideas in the Cinoop guide. It does not include the original Game Boy boot program or copy Cinoop's source code.
