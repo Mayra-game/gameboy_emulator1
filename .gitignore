@@ -1,0 +1,13 @@
+# Local build products
+gameboy_emulator
+*.dSYM/
+
+# Local emulator outputs and save data
+*.gb
+*.gbc
+*.sav
+*.ppm
+*.wav
+
+# macOS metadata
+.DS_Store
