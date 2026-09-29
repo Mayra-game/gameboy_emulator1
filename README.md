@@ -20,7 +20,25 @@ The emulator runs at most one million instructions by default. Choose a limit, s
 ./gameboy_emulator --play path/to/game.gb
 ```
 
-The entry point assumes the post-boot DMG CPU register state (`PC=0x0100`); it does not execute the Nintendo boot ROM. `--self-test` runs CPU, memory, cartridge, PPU, input, and APU checks. `make run ROM=path/to/game.gb` is also available.
+The entry point starts the CPU and commonly used DMG I/O registers in an approximate post-boot
+state (`PC=0x0100`, LCD enabled); it does not execute the Nintendo boot ROM. Games that rely on
+other boot-ROM side effects may still fail. `--self-test` runs CPU, memory, cartridge, PPU, input,
+and APU checks. `make run ROM=path/to/game.gb` is also available.
+
+## How the code is organized
+
+- `src/cpu.c` fetches an opcode at the program counter, decodes it, updates registers and flags, and
+  reports how many clock cycles the instruction used.
+- `src/memory.c` routes 16-bit addresses to cartridge ROM/RAM, working RAM, video memory, I/O
+  registers, and hardware behavior. The `data` array represents the 64 KiB address range; cartridge
+  ROM and banked cartridge RAM are stored separately because they can be larger than one address
+  range at a time.
+- `memory_tick` advances the timer, LCD, and audio by the cycles reported by the CPU.
+- `src/main.c` loads the ROM, starts the CPU, and provides command-line, terminal display, and
+  self-test entry points.
+
+For example, when the CPU executes `LD A,(HL)`, it passes the 16-bit address in `HL` to
+`memory_read`; the memory layer decides which device owns that address and returns its value.
 
 ## Implemented
 

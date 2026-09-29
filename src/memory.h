@@ -26,6 +26,7 @@ typedef struct {
     uint32_t audio_samples;
 } Memory;
 void memory_init(Memory *m);
+void memory_init_post_boot(Memory *m);
 int memory_load_rom(Memory *m, const char *path, char *error, size_t error_size);
 uint8_t memory_read(Memory *m, uint16_t address);
 void memory_write(Memory *m, uint16_t address, uint8_t value);
